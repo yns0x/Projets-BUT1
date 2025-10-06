@@ -1,0 +1,1 @@
+Les gars tentez pas de copier si vous êtes intelligent et voulez progresser faites le vous même et ssi vou galérez à mort regardez la partie que vous arrivez pas à faire et compenez là avant de la refaire à votre manière (soyez pas des flocko pendant le DST)
