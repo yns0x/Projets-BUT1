@@ -26,6 +26,8 @@ typedef struct {
     char nom[TAILLE_MAX_ETU];
     int id;
     int semestre_actuel;
+    int est_defaillant;
+    int demission;
     Semestre cursus_complet[NB_SEMESTRES];
 } Etudiant;
 
@@ -49,6 +51,8 @@ int inscription(Etudiant etudiant[], char prenom[TAILLE_MAX_ETU], char nom[TAILL
             etudiant[compteur_etudiant].cursus_complet[0].no_ue[i].est_enregistree = 0;
         }
         printf("Inscription enregistree (%d)\n", etudiant[compteur_etudiant].id);
+        etudiant[compteur_etudiant].est_defaillant = 0;
+        etudiant[compteur_etudiant].demission = 0;
         return 1;
     }
     printf("Nombre max d'étudiants atteint\n");
@@ -56,9 +60,7 @@ int inscription(Etudiant etudiant[], char prenom[TAILLE_MAX_ETU], char nom[TAILL
 }
 
 char* resultat_note(float note) {
-    char resultat[4];
-    strcpy(resultat, note < 10 ? "AJ" : "ADM");
-    return resultat;
+    return note < 10 ? "AJ" : "ADM";
 }
 
 
@@ -106,13 +108,17 @@ void note(Etudiant etudiant[], int compteur) {
     int id, ue;
     float note;
     scanf("%i %i %f", &id, &ue, &note);
-    if ((note < 0 || note > 20) || (id < 1 || id > compteur)) {
+    if (etudiant[id - 1].est_defaillant == 1 || etudiant[id - 1].demission == 1) {
+        printf("Etudiant hors formation\n");
+        return;
+    }
+    else if ((note < 0 || note > 20) || (id < 1 || id > compteur)) {
         printf("Erreur\n");
     }
     else {
         etudiant[id - 1].cursus_complet[etudiant[id - 1].semestre_actuel - 1].no_ue[ue - 1].note = note;
         etudiant[id - 1].cursus_complet[etudiant[id - 1].semestre_actuel - 1].no_ue[ue - 1].est_enregistree = 1;
-        printf("Note enregistrée\n");
+        printf("Note enregistree\n");
     }
 }
 
@@ -132,12 +138,50 @@ void jury(Etudiant etudiant[], int parite, int compteur_etudiant) {
                     strcpy(etudiant[etu].cursus_complet[etudiant[etu].semestre_actuel - 1].statut, "en cours");
                     for (int i = 0; i < NB_UE_PAR_SEMESTRE; i++) {
                         etudiant[etu].cursus_complet[etudiant[etu].semestre_actuel - 1].no_ue[i].est_enregistree = 0;
-                    }
+                    } 
                 }
             }
         }
     }
 }
+
+void defaillance(Etudiant etudiant[], int compteur) {
+    int id;
+    scanf("%i", &id);
+    if (id >= 0 && id <= compteur) {
+        int semestre = etudiant[id - 1].semestre_actuel;
+        if (strcmp(etudiant[id - 1].cursus_complet[semestre - 1].statut, "en cours") == 0){
+            etudiant[id - 1].est_defaillant = 1;
+            printf("Defaillance enregistree\n");
+            strcpy(etudiant[id - 1].cursus_complet[semestre - 1].statut, "defaillance");
+        }
+        else {
+            printf("Etudiant hors formation\n");
+        }
+        return;
+    }
+    printf("Identifiant incorrect\n");
+}
+
+void demission(Etudiant etudiant[], int compteur) {
+    int id;
+    scanf("%i", &id);
+    if (id >= 0 && id <= compteur) {
+        int semestre = etudiant[id - 1].semestre_actuel;
+        if (strcmp(etudiant[id - 1].cursus_complet[semestre - 1].statut, "en cours") == 0) {
+            etudiant[id - 1].demission = 1;
+            strcpy(etudiant[id - 1].cursus_complet[semestre - 1].statut, "demission");
+            printf("Demission enregistree\n");
+        }
+        else {
+            printf("Etudiant hors formation\n");
+        }
+        return;
+    }
+    printf("Identifiant incorrect\n");
+}
+
+
 
 int main() {
 
@@ -167,6 +211,12 @@ int main() {
             int parite;
             scanf("%i", &parite);
             jury(etudiant, parite, compteur_etudiant);
+        }
+        else if (strcmp(commande, "DEFAILLANCE") == 0) {
+            defaillance(etudiant, compteur_etudiant);
+        }
+        else if (strcmp(commande, "DEMISSION") == 0) {
+            demission(etudiant, compteur_etudiant);
         }
     } while (strcmp(commande, "EXIT") != 0);
 }
