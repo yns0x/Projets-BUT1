@@ -3,35 +3,33 @@
 #include <string.h>
 #include <math.h>
 #pragma warning (disable : 4996 6031)
-#define MAX_ELEVES 100
-#define NB_SEMESTRES 6
-#define NB_UE_PAR_SEMESTRE 6
 
 enum {
-    TAILLE_MAX_ETU = 50 // la taille max du nom et prénom d'un etudiant
+    TAILLE_MAX_ETU = 50,
+    NB_UE_PAR_SEMESTRE = 6,
+    MAX_ELEVES = 100,
+    NB_SEMESTRES = 6
 };
 
 typedef struct {
     float note;
-    int est_enregistree; // si c'est = 0 alors, il y aura ('*') sinon cela veut dire qu'elle est bien définie
+    int est_enregistree;
 } UE;
 
 typedef struct {
     UE no_ue[NB_UE_PAR_SEMESTRE];
-    char statut[20]; // "en cours", "demission", "ajourne", "admis", "defaillant", "diplome".
+    char statut[20];
 } Semestre;
 
 typedef struct {
     char prenom[TAILLE_MAX_ETU];
     char nom[TAILLE_MAX_ETU];
     int id;
-    int semestre_actuel; // Le numéro du semestre en cours (1 à 6)
+    int semestre_actuel;
     Semestre cursus_complet[NB_SEMESTRES];
 } Etudiant;
 
-Etudiant etudiant[MAX_ELEVES];
-
-int inscription(char prenom[TAILLE_MAX_ETU], char nom[TAILLE_MAX_ETU], int compteur_etudiant) {
+int inscription(Etudiant etudiant[], char prenom[TAILLE_MAX_ETU], char nom[TAILLE_MAX_ETU], int compteur_etudiant) {
     if (compteur_etudiant < MAX_ELEVES) {
 
         // on verifie si l'étudiant est deja inscrit
@@ -57,28 +55,28 @@ int inscription(char prenom[TAILLE_MAX_ETU], char nom[TAILLE_MAX_ETU], int compt
     return 0;
 }
 
-char* resultat_note(const float note) {
-    if (note < 10.0) {
-        return "AJ";
-    }
-    return "ADM";
+char* resultat_note(float note) {
+    char resultat[4];
+    strcpy(resultat, note < 10 ? "AJ" : "ADM");
+    return resultat;
 }
 
-void etudiants(int compteur_etudiants) {
+
+void etudiants(Etudiant etudiant[], int compteur_etudiants) {
     for (int i = 0; i < compteur_etudiants; i++) {
         // On calcule l'index du semestre actuel
         int no_semestre = etudiant[i].semestre_actuel - 1;
 
         printf("%i - %s %s - S%i - %s\n",
-               etudiant[i].id,
-               etudiant[i].prenom,
-               etudiant[i].nom,
-               etudiant[i].semestre_actuel,
-               etudiant[i].cursus_complet[no_semestre].statut);
+            etudiant[i].id,
+            etudiant[i].prenom,
+            etudiant[i].nom,
+            etudiant[i].semestre_actuel,
+            etudiant[i].cursus_complet[no_semestre].statut);
     }
 }
 
-void cursus(int compteur) {
+void cursus(Etudiant etudiant[], int compteur) {
     int id;
     scanf("%i", &id);
     if (id <= compteur && id > 0) {
@@ -90,18 +88,21 @@ void cursus(int compteur) {
                 UE ue_actuelle = etudiant[id_e].cursus_complet[i].no_ue[j];
                 if (ue_actuelle.est_enregistree == 1) {
                     printf("%.1f (%s) - ", ue_actuelle.note, resultat_note(ue_actuelle.note));
-                } else {
+                }
+                else {
                     printf("* (*) - ");
                 }
             }
             printf("%s\n", etudiant[id_e].cursus_complet[i].statut);
         }
-    } else {
+    }
+    else {
         printf("Identifiant incorrect\n");
     }
 }
 
-void note(int compteur) {
+// enregistre la note pour l'élève avec l'identifiant sélectionné, l'UE voulue et la note qu'il a obtenue
+void note(Etudiant etudiant[], int compteur) {
     int id, ue;
     float note;
     scanf("%i %i %f", &id, &ue, &note);
@@ -115,7 +116,33 @@ void note(int compteur) {
     }
 }
 
+void jury(Etudiant etudiant[], int parite, int compteur_etudiant) {
+    for (int etu = 0; etu < compteur_etudiant; ++etu) {
+        int semestre_actuel = etudiant[etu].semestre_actuel;
+        if (semestre_actuel % 2 == parite % 2) {
+            int nb_notes = 0;
+            for (int i = 0; i < NB_UE_PAR_SEMESTRE; ++i) {
+                if (etudiant[etu].cursus_complet[semestre_actuel - 1].no_ue[i].est_enregistree == 1)
+                    nb_notes++;
+            }
+            if (nb_notes == NB_UE_PAR_SEMESTRE) {
+                strcpy(etudiant[etu].cursus_complet[semestre_actuel - 1].statut, "valide");
+                if (semestre_actuel < NB_SEMESTRES) {
+                    etudiant[etu].semestre_actuel++;
+                    strcpy(etudiant[etu].cursus_complet[etudiant[etu].semestre_actuel - 1].statut, "en cours");
+                    for (int i = 0; i < NB_UE_PAR_SEMESTRE; i++) {
+                        etudiant[etu].cursus_complet[etudiant[etu].semestre_actuel - 1].no_ue[i].est_enregistree = 0;
+                    }
+                }
+            }
+        }
+    }
+}
+
 int main() {
+
+    Etudiant etudiant[MAX_ELEVES];
+
     char commande[20];
     int compteur_etudiant = 0;
 
@@ -125,16 +152,21 @@ int main() {
         if (strcmp(commande, "INSCRIRE") == 0) {
             char prenom[TAILLE_MAX_ETU], nom[TAILLE_MAX_ETU];
             scanf("%50s %50s", prenom, nom);
-            if (inscription(prenom, nom, compteur_etudiant) == 1) compteur_etudiant++;
+            if (inscription(etudiant, prenom, nom, compteur_etudiant) == 1) compteur_etudiant++;
         }
         else if (strcmp(commande, "ETUDIANTS") == 0) {
-            etudiants(compteur_etudiant);
+            etudiants(etudiant, compteur_etudiant);
         }
         else if (strcmp(commande, "CURSUS") == 0) {
-            cursus(compteur_etudiant);
+            cursus(etudiant, compteur_etudiant);
         }
-        else if (strcmp(commande, "NOTE") == 0){
-            note(compteur_etudiant);
+        else if (strcmp(commande, "NOTE") == 0) {
+            note(etudiant, compteur_etudiant);
+        }
+        else if (strcmp(commande, "JURY") == 0) {
+            int parite;
+            scanf("%i", &parite);
+            jury(etudiant, parite, compteur_etudiant);
         }
     } while (strcmp(commande, "EXIT") != 0);
 }
